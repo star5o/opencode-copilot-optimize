@@ -3,6 +3,9 @@ name: build-cli-local
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -13,14 +16,17 @@ jobs:
             runner: macos-14
             dir: opencode-darwin-arm64
             bin: opencode
+            out: opencode-darwin-arm64
           - name: linux-x64
             runner: ubuntu-latest
             dir: opencode-linux-x64
             bin: opencode
+            out: opencode-linux-x64
           - name: windows-x64
             runner: windows-latest
             dir: opencode-windows-x64
             bin: opencode.exe
+            out: opencode-windows-x64.exe
     runs-on: ${{ matrix.cfg.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +36,38 @@ jobs:
         working-directory: packages/opencode
         env:
           OPENCODE_VERSION: "1.2.17-copilot-opt"
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: mv packages/opencode/dist/${{ matrix.cfg.dir }}/bin/${{ matrix.cfg.bin }} ${{ matrix.cfg.out }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: move packages\opencode\dist\${{ matrix.cfg.dir }}\bin\${{ matrix.cfg.bin }} ${{ matrix.cfg.out }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: opencode-${{ matrix.cfg.name }}
-          path: packages/opencode/dist/${{ matrix.cfg.dir }}/bin/${{ matrix.cfg.bin }}
+          path: ${{ matrix.cfg.out }}
           if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Get current date for tag
+        id: date
+        run: echo "tag=$(TZ='Asia/Shanghai' date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ steps.date.outputs.tag }}
+          name: ${{ steps.date.outputs.tag }}
+          files: artifacts/*
