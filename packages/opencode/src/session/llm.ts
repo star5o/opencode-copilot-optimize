@@ -26,7 +26,7 @@ import { Auth } from "@/auth"
 export namespace LLM {
   const log = Log.create({ service: "llm" })
   export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
-  const initiated = new Set<string>()
+  const initiated = new Map<string, string>()
 
   export type StreamInput = {
     user: MessageV2.User
@@ -170,8 +170,10 @@ export namespace LLM {
       })
     }
 
-    const copilot = provider.id.includes("github-copilot") && initiated.has(input.sessionID)
-    if (provider.id.includes("github-copilot")) initiated.add(input.sessionID)
+    const copilot = provider.id.includes("github-copilot")
+    const turn = initiated.get(input.sessionID) === input.user.id
+    if (copilot) initiated.set(input.sessionID, input.user.id)
+    const initiator = copilot ? (turn ? "agent" : "user") : undefined
 
     return streamText({
       onError(error) {
@@ -222,8 +224,8 @@ export namespace LLM {
                 "User-Agent": `opencode/${Installation.VERSION}`,
               }
             : undefined),
-        ...(copilot
-          ? { "x-initiator": "agent" }
+        ...(initiator
+          ? { "x-initiator": initiator }
           : undefined),
         ...input.model.headers,
         ...headers,
