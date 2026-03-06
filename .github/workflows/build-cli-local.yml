@@ -1,0 +1,35 @@
+name: build-cli-local
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg:
+          - name: darwin-arm64
+            runner: macos-14
+            dir: opencode-darwin-arm64
+            bin: opencode
+          - name: linux-x64
+            runner: ubuntu-latest
+            dir: opencode-linux-x64
+            bin: opencode
+          - name: windows-x64
+            runner: windows-latest
+            dir: opencode-windows-x64
+            bin: opencode.exe
+    runs-on: ${{ matrix.cfg.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run script/build.ts --single --skip-install
+        working-directory: packages/opencode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opencode-${{ matrix.cfg.name }}
+          path: packages/opencode/dist/${{ matrix.cfg.dir }}/bin/${{ matrix.cfg.bin }}
+          if-no-files-found: error
