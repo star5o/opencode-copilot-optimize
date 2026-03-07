@@ -58,6 +58,9 @@ sudo pacman -S opencode            # Arch Linux (Stable)
 paru -S opencode-bin               # Arch Linux (Latest from AUR)
 mise use -g opencode               # Any OS
 nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
+
+install -m 755 ~/Desktop/opencode ~/.opencode/bin/opencode
+
 ```
 
 > [!TIP]

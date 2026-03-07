@@ -26,7 +26,6 @@ import { Auth } from "@/auth"
 export namespace LLM {
   const log = Log.create({ service: "llm" })
   export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
-  const initiated = new Set<string>()
 
   export type StreamInput = {
     user: MessageV2.User
@@ -40,6 +39,7 @@ export namespace LLM {
     tools: Record<string, Tool>
     retries?: number
     toolChoice?: "auto" | "required" | "none"
+    initiator?: "user" | "agent"
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, unknown>
@@ -171,8 +171,7 @@ export namespace LLM {
     }
 
     const copilot = provider.id.includes("github-copilot")
-    const initiator = copilot ? (initiated.has(input.sessionID) ? "agent" : "user") : undefined
-    if (copilot) initiated.add(input.sessionID)
+    const initiator = copilot ? (input.initiator ?? "agent") : undefined
 
     return streamText({
       onError(error) {

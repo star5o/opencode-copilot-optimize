@@ -290,6 +290,7 @@ export namespace SessionPrompt {
     let structuredOutput: unknown | undefined
 
     let step = 0
+    let initiated: string | undefined
     const session = await Session.get(sessionID)
     while (true) {
       SessionStatus.set(sessionID, { type: "busy" })
@@ -655,6 +656,9 @@ export namespace SessionPrompt {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
       }
 
+      const synthetic = msgs.findLast((m) => m.info.id === lastUser.id)?.parts.every((p) => "synthetic" in p && p.synthetic) ?? false
+      const first = initiated !== lastUser.id && !synthetic
+      initiated = lastUser.id
       const result = await processor.process({
         user: lastUser,
         agent,
@@ -675,6 +679,7 @@ export namespace SessionPrompt {
         tools,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
+        initiator: first ? "user" : "agent",
       })
 
       // If structured output was captured, save it and exit immediately
