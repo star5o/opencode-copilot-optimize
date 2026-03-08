@@ -39,6 +39,7 @@ export namespace LLM {
     tools: Record<string, Tool>
     retries?: number
     toolChoice?: "auto" | "required" | "none"
+    initiator?: "user" | "agent"
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, unknown>
@@ -169,6 +170,9 @@ export namespace LLM {
       })
     }
 
+    const copilot = provider.id.includes("github-copilot")
+    const initiator = copilot ? (input.initiator ?? "agent") : undefined
+
     return streamText({
       onError(error) {
         l.error("stream error", {
@@ -220,6 +224,7 @@ export namespace LLM {
             : undefined),
         ...input.model.headers,
         ...headers,
+        ...(initiator ? { "x-initiator": initiator } : undefined),
       },
       maxRetries: input.retries ?? 0,
       messages: [
