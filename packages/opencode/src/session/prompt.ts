@@ -290,7 +290,7 @@ export namespace SessionPrompt {
     let structuredOutput: unknown | undefined
 
     let step = 0
-    let initiated: string | undefined
+    let initiated = false
     const session = await Session.get(sessionID)
     while (true) {
       SessionStatus.set(sessionID, { type: "busy" })
@@ -656,10 +656,10 @@ export namespace SessionPrompt {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
       }
 
-      const synthetic = lastUser.parts.every((p) => "synthetic" in p && p.synthetic) ?? false
-      const systemReminder = lastUser.parts.some((p) => p.type === "text" && p.text.includes("<system-reminder>") && p.text.includes("[BACKGROUND TASK COMPLETED]")) ?? false
-      const first = initiated !== lastUser.id && !synthetic && !systemReminder
-      initiated = lastUser.id
+      const synthetic =
+        msgs.findLast((m) => m.info.id === lastUser.id)?.parts.every((p) => "synthetic" in p && p.synthetic) ?? false
+      const first = !initiated && !synthetic
+      if (first) initiated = true
       const result = await processor.process({
         user: lastUser,
         agent,
